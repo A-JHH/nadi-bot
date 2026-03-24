@@ -2,7 +2,7 @@ const { Telegraf } = require('telegraf');
 const admin = require('firebase-admin');
 const http = require('http');
 
-// 1. Firebase Setup (Render Secret File መንገድ)
+// 1. Firebase Setup
 const serviceAccountPath = "/etc/secrets/serviceAccountKey.json";
 
 try {
@@ -11,68 +11,67 @@ try {
         credential: admin.credential.cert(serviceAccount),
         databaseURL: "https://nadi-bot-db-default-rtdb.firebaseio.com"
     });
-    console.log("✅ Firebase Connected Successfully!");
+    console.log("✅ Firebase Connected!");
 } catch (error) {
     console.error("❌ Firebase Error:", error.message);
 }
 
 const db = admin.database();
-
-// 2. በሰጠኸኝ አዲስ Token ቦቱን ማስጀመር
 const bot = new Telegraf('8739452566:AAGsvESMjWorDW3i5O06GPnV_xznRlQUUY4');
 
-// 3. Render Port Error እንዳይመጣ (Dummy Server)
+// Render Port Error እንዳይመጣ
 http.createServer((req, res) => {
-    res.write('NADI BOT is Live and Running!');
+    res.write('NADI BOT is Live!');
     res.end();
 }).listen(process.env.PORT || 3000);
 
-// 4. Start Command
 bot.start((ctx) => {
     ctx.reply('እንኳን ወደ NADI UNLOCKER Giveaway በሰላም መጡ! 🎁\n\nለመመዝገብ የሰብስክራይብ ስክሪንሾት እዚህ ይላኩ።');
 });
 
-// 5. ተጠቃሚዎችን መመዝገብ
+// 2. ፎቶ ሲላክ የሚሰራው ክፍል
 bot.on('photo', async (ctx) => {
     const userId = ctx.from.id;
     const username = ctx.from.username || "No_Username";
     const firstName = ctx.from.first_name || "User";
 
     try {
-        const userRef = db.ref('users/' + userId);
-        await userRef.set({
+        // መረጃውን Firebase ላይ መመዝገብ
+        await db.ref('users/' + userId).set({
             id: userId,
             username: username,
             name: firstName,
             date: new Date().toLocaleString()
         });
 
+        // ለተጠቃሚው ምላሽ መስጠት
         ctx.reply(`✅ እናመሰግናለን ${firstName}! በትክክል ተመዝግበዋል። መልካም እድል!`);
+
+        // ለአንተ (Admin) ፎቶውን እና መረጃውን መላክ
+        const myId = '5834630929';
         
-        // ለአስተዳዳሪው (ላንተ) መረጃ እንዲደርስህ
-        bot.telegram.sendMessage('5834630929', `🚀 አዲስ ተመዝጋቢ ተገኝቷል!\n\nስም: ${firstName}\nUsername: @${username}\nID: ${userId}`);
+        // መጀመሪያ ፎቶውን Forward ማድረግ
+        await ctx.forwardMessage(myId);
+        
+        // በመቀጠል መረጃውን መላክ
+        await bot.telegram.sendMessage(myId, `🚀 አዲስ ተመዝጋቢ!\n\nስም: ${firstName}\nUsername: @${username}\nID: ${userId}`);
+
     } catch (e) {
-        console.error("Database Save Error:", e.message);
-        ctx.reply('ይቅርታ፣ ምዝገባው ላይ ስህተት አጋጥሟል።');
+        console.error("Error:", e.message);
     }
 });
 
-// 6. አሸናፊ መምረጫ (ለአንተ ብቻ)
+// አሸናፊ መምረጫ
 bot.command('pick', async (ctx) => {
     if (ctx.from.id.toString() !== '5834630929') return;
-
     const usersRef = db.ref('users');
     usersRef.once('value', (snapshot) => {
         const users = snapshot.val();
         if (!users) return ctx.reply("ምንም ተመዝጋቢ የለም።");
-
         const userList = Object.values(users);
         const winner = userList[Math.floor(Math.random() * userList.length)];
-
         ctx.reply(`🎉 የዛሬው አሸናፊ፡\n\nስም፡ ${winner.name}\nUsername: @${winner.username}\nID: ${winner.id}`);
     });
 });
 
-bot.launch().then(() => {
-    console.log("🚀 NADI BOT is fully operational with the new token!");
-});
+bot.launch().then(() => console.log("🚀 Bot is Polling with Photo Forwarding..."));
