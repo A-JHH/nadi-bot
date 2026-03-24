@@ -17,7 +17,7 @@ try {
 }
 
 const db = admin.database();
-const bot = new Telegraf('7545931215:AAH_Qcl18-XUvG4fF_6N-t0_ZREmS6L6Z30');
+const bot = new Telegraf('8739452566:AAGsvESMjWorDW3i5O06GPnV_xznRlQUUY4');
 
 // Render Port Error እንዳይመጣ
 http.createServer((req, res) => {
